@@ -1,0 +1,14 @@
+# MTech IIT Madras || System Engineering for Deep Learning || Assignment 2
+# Created by Tanuj Gupta (CS25M540)
+# Q3: post-training quantization at every combination of weight / activation bit width (30 runs).
+# Stem conv + classifier keep 8-bit weights; everything else follows weight_quant_bits.
+program: test.py
+name: ptq-bitwidth-grid
+method: grid
+metric: {name: quantized_acc, goal: maximize}
+parameters:
+  weight_quant_bits: {values: [8, 6, 5, 4, 3, 2]}
+  activation_quant_bits: {values: [8, 6, 4, 3, 2]}
+  first_last_bits: {value: 8}
+  qat_epochs: {value: 0}
+  seed: {value: 42}
