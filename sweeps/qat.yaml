@@ -1,0 +1,15 @@
+# MTech IIT Madras || System Engineering for Deep Learning || Assignment 2
+# Created by Tanuj Gupta (CS25M540)
+# Q3/Q4: aggressive settings recovered with 10 epochs of quantization-aware fine-tuning (12 runs).
+# These are the candidates for the best accuracy / compression trade-off.
+program: test.py
+name: qat-low-bit-grid
+method: grid
+metric: {name: quantized_acc, goal: maximize}
+parameters:
+  weight_quant_bits: {values: [4, 3, 2]}
+  activation_quant_bits: {values: [8, 4]}
+  dw_bits: {values: [0, 8]}   # 0 = depthwise convs use weight_quant_bits; 8 = keep them at 8 bits
+  first_last_bits: {value: 8}
+  qat_epochs: {value: 10}
+  seed: {value: 42}
