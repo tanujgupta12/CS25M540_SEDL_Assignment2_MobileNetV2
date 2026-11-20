@@ -28,16 +28,20 @@ sweeps/ptq.yaml       30-run grid: weight bits x activation bits, post-training 
 sweeps/qat.yaml       12-run grid: low-bit settings with 10 epochs of QAT
 run_sweeps.sh         creates and runs both sweeps
 colab_run.ipynb       one-click Colab launcher (all logic is in the .py files)
+results/              results.csv (all 42 compression runs) and parallel_coords.png
 ```
 
 ## Setup
 
 | | Version |
 |---|---|
-| Python | 3.10 or newer (fill in from `environment.txt` after the Colab run) |
-| PyTorch / torchvision | 2.3+ / 0.18+ |
-| wandb | 0.17+ |
-| Hardware | Google Colab, NVIDIA T4. The code also runs on CPU and Apple MPS. |
+| Python | 3.13.16 |
+| PyTorch / torchvision | 2.14.1+cu130 / 0.29.1+cu130 (CUDA 13.0) |
+| wandb | 0.28.1 |
+| matplotlib | 3.10.0 |
+| Hardware | Google Colab, 1x NVIDIA Tesla T4. The code also runs on CPU and Apple MPS. |
+
+These are the versions recorded by W&B for the reported runs. `requirements.txt` gives the minimum versions.
 
 ```bash
 pip install -r requirements.txt
@@ -113,12 +117,53 @@ To get the W&B parallel coordinates chart, open the project, click **Add panel �
 
 ## Results
 
-Fill these in from the Colab run (`checkpoints/baseline/evaluate.txt`, `results.csv`, W&B).
+All numbers come from the W&B project `CS6886W-SEDL-Assignment2-MobileNetV2` (seed 42, Colab T4). `results/results.csv` has every compression run and `results/parallel_coords.png` is an offline copy of the parallel coordinates chart.
+
+### Baseline (Q1)
 
 | | Value |
 |---|---|
-| fp32 baseline test accuracy | _TBD_ |
-| fp32 in-memory size | 8.66 MB (9,083,592 bytes) |
-| Best configuration | _TBD_ |
-| Compressed model size / accuracy | _TBD_ |
-| Model / weight / activation compression ratio | _TBD_ |
+| Epochs / training time | 200 / 2 h 12 min on a T4 |
+| Best validation accuracy | 95.32% |
+| **Test top-1 accuracy (fp32, uncompressed)** | **94.47%** |
+| In-memory size | 8.66 MB (9,083,592 bytes; CUDA allocator: 8.74 MB) |
+
+### Sweep summary (Q3)
+
+42 runs: 30 post-training quantization (PTQ) runs over weight bits {8, 6, 5, 4, 3, 2} x activation bits {8, 6, 4, 3, 2}, and 12 runs with 10 epochs of QAT. The stem conv and classifier stay at 8-bit weights in every run.
+
+| Configuration | Test acc | Drop | Model size | Model ratio | Weight ratio | Activation ratio |
+|---|---|---|---|---|---|---|
+| W8 A8, PTQ | 94.39% | 0.08 | 2.20 MB | 3.94x | 3.94x | 4.00x |
+| W6 A8, PTQ | 94.36% | 0.11 | 1.68 MB | 5.17x | 5.21x | 4.00x |
+| W4 A8, PTQ | 93.46% | 1.01 | 1.15 MB | 7.50x | 7.71x | 4.00x |
+| W4 A4, QAT | 93.86% | 0.61 | 1.15 MB | 7.50x | 7.71x | 7.98x |
+| **W3 A8, QAT (best)** | **94.00%** | **0.47** | **0.89 MB** | **9.69x** | **10.14x** | 4.00x |
+| W3 (depthwise 8) A4, QAT | 93.52% | 0.95 | 0.93 MB | 9.30x | 9.69x | 7.98x |
+| W2 (depthwise 8) A8, QAT | 92.26% | 2.21 | 0.68 MB | 12.76x | 13.70x | 4.00x |
+| W2 A8, QAT | 89.68% | 4.79 | 0.63 MB | 13.69x | 14.81x | 4.00x |
+
+Observations:
+- Down to 4-bit weights, PTQ alone keeps accuracy within about 1 point. At 3 bits PTQ falls to 81.1% and at 2 bits to 10% (chance level). 10 epochs of QAT bring 3-bit weights back to 94.0% and 2-bit weights to 89.7-92.3%.
+- Activations are the more sensitive side: with PTQ and weights of 4 bits or more, 3-bit activations cost 8.6-12.9 points and 2-bit activations 65.8-72.7 points. With QAT, 4-bit activations cost 0.61-0.95 points (except W3 A4 with 3-bit depthwise convs: 1.32).
+- Keeping the depthwise convs at 8 bits costs little memory (0.89 → 0.93 MB at W3) and helps most at 2 bits (89.7% → 92.3%).
+
+### Best configuration (Q4)
+
+"Best" = highest whole-model compression ratio with at most 1 point of accuracy loss: 3-bit weights (stem conv and classifier 8-bit), 8-bit activations, 10 epochs QAT.
+
+```bash
+python test.py --weight_quant_bits 3 --activation_quant_bits 8 --first_last_bits 8 --dw_bits 3 --qat_epochs 10
+```
+
+| | Value |
+|---|---|
+| Test accuracy | 94.00% (fp32: 94.47%; drop 0.47 points; PTQ-only at these bits: 81.14%) |
+| **Model compression ratio (in memory)** | **9.69x** (8.66 MB → 0.894 MB) |
+| **Weight compression ratio** | **10.14x** (8.40 MB → 0.828 MB incl. scales) |
+| **Activation compression ratio** | **4.00x** (6.27 MB → 1.57 MB per image, summed over 54 activation tensors) |
+| Storage overheads | per-channel fp16 weight scales 33.3 KB, activation scales + zero points 0.16 KB (together 3.7% of the model), plus fp32 folded biases 66.7 KB |
+| CUDA allocator check | 8.74 MB → 1.06 MB (the allocator rounds every tensor up to a 512-byte block, and the packed model has many small per-layer tensors, so it reads slightly above the exact tensor bytes) |
+| **Final approximate model size** | **0.89 MB** |
+
+If activation compression matters as much as model size, W3 (depthwise 8) A4 with QAT is the best balance: 9.30x model, 9.69x weights, 7.98x activations at 93.52% (drop 0.95).
