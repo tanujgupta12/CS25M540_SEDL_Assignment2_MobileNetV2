@@ -28,7 +28,7 @@ sweeps/ptq.yaml       30-run grid: weight bits x activation bits, post-training 
 sweeps/qat.yaml       12-run grid: low-bit settings with 10 epochs of QAT
 run_sweeps.sh         creates and runs both sweeps
 colab_run.ipynb       one-click Colab launcher (all logic is in the .py files)
-results/              results.csv (all 42 compression runs) and parallel_coords.png
+results/              results.csv (all 42 compression runs), parallel_coords.png, environment.txt
 ```
 
 ## Setup
@@ -39,9 +39,10 @@ results/              results.csv (all 42 compression runs) and parallel_coords.
 | PyTorch / torchvision | 2.14.1+cu130 / 0.29.1+cu130 (CUDA 13.0) |
 | wandb | 0.28.1 |
 | matplotlib | 3.10.0 |
+| numpy | 2.4.6 |
 | Hardware | Google Colab, 1x NVIDIA Tesla T4. The code also runs on CPU and Apple MPS. |
 
-These are the versions recorded by W&B for the reported runs. `requirements.txt` gives the minimum versions.
+These are the versions recorded by W&B for the reported runs (`results/environment.txt` has the `pip freeze` / Python / GPU record from the Colab session). `requirements.txt` gives the minimum versions.
 
 ```bash
 pip install -r requirements.txt
@@ -165,5 +166,7 @@ python test.py --weight_quant_bits 3 --activation_quant_bits 8 --first_last_bits
 | Storage overheads | per-channel fp16 weight scales 33.3 KB, activation scales + zero points 0.16 KB (together 3.7% of the model), plus fp32 folded biases 66.7 KB |
 | CUDA allocator check | 8.74 MB → 1.06 MB (the allocator rounds every tensor up to a 512-byte block, and the packed model has many small per-layer tensors, so it reads slightly above the exact tensor bytes) |
 | **Final approximate model size** | **0.89 MB** |
+
+**Reproducibility check.** This configuration was re-run from scratch in a separate Colab T4 session (fresh runtime, same `best.pt` baseline, seed 42; W&B run `ewdfy4es`). Every QAT epoch and every number above came out identical: 81.14% → 94.00% test accuracy (94.18% validation), 9.69x / 10.14x / 4.00x, 0.894 MB, 1.06 MB on the CUDA allocator. The saved packed model (`checkpoints/best_compressed/compressed_model.pt`, 1.06 MB on disk) re-evaluates to the same 94.00% with `evaluate.py --compressed`. That rerun is a duplicate of the sweep run `w3-a8-fl8-dw3-qat10`, so it is not included in `results/results.csv`.
 
 If activation compression matters as much as model size, W3 (depthwise 8) A4 with QAT is the best balance: 9.30x model, 9.69x weights, 7.98x activations at 93.52% (drop 0.95).
