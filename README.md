@@ -29,6 +29,7 @@ sweeps/qat.yaml       12-run grid: low-bit settings with 10 epochs of QAT
 run_sweeps.sh         creates and runs both sweeps
 colab_run.ipynb       one-click Colab launcher (all logic is in the .py files)
 results/              results.csv (all 42 compression runs), parallel_coords.png, environment.txt
+report/               the PDF report (CS25M540_SEDL_Assignment2_Report.pdf) and its figures
 ```
 
 ## Setup
