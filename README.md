@@ -91,7 +91,7 @@ python wandb_results.py plot --out parallel_coords.png
 python wandb_results.py best --max_drop 1.0
 ```
 
-To get the W&B parallel coordinates chart, open the project, click **Add panel → Parallel coordinates**, and choose the columns `activation_quant_bits`, `weight_quant_bits`, `compression_ratio`, `model_size_mb`, `quantized_acc`.
+The W&B parallel coordinates chart for the 42 sweep runs is in the W&B report [MobileNetV2 CIFAR-10 compression sweep (Assignment 2)](https://wandb.ai/tanujgupta12-iitm/CS6886W-SEDL-Assignment2-MobileNetV2/reports/MobileNetV2-CIFAR-10-compression-sweep-(Assignment-2)--VmlldzoxODM0NDY2Nw==) (runset filter: finished `compress` runs that belong to a sweep) and as an image in `report/wandb_parallel_coordinates.png`. To recreate it in your own project, click **Add panel → Parallel coordinates** and choose `weight_quant_bits`, `activation_quant_bits`, `dw_bits`, `qat_epochs`, `compression_ratio`, `activation_compression_ratio`, `model_size_mb`, `quantized_acc`.
 
 ## Method
 
