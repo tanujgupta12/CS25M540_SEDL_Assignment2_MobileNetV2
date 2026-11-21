@@ -2,7 +2,7 @@
 <!-- Created by Tanuj Gupta (CS25M540) -->
 # MobileNet-v2 on CIFAR-10: training and compression
 
-CS6886W Systems Engineering for Deep Learning, Assignment 2. Name: Tanuj. Roll no: CS25M540.
+CS6886W Systems Engineering for Deep Learning, Assignment 2. Name: Tanuj Gupta. Roll no: CS25M540.
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/tanujgupta12/CS25M540_SEDL_Assignment2_MobileNetV2/blob/main/colab_run.ipynb)
 
@@ -146,8 +146,8 @@ All numbers come from the W&B project `CS6886W-SEDL-Assignment2-MobileNetV2` (se
 | W2 A8, QAT | 89.68% | 4.79 | 0.63 MB | 13.69x | 14.81x | 4.00x |
 
 Observations:
-- Down to 4-bit weights, PTQ alone keeps accuracy within about 1 point. At 3 bits PTQ falls to 81.1% and at 2 bits to 10% (chance level). 10 epochs of QAT bring 3-bit weights back to 94.0% and 2-bit weights to 89.7-92.3%.
-- Activations are the more sensitive side: with PTQ and weights of 4 bits or more, 3-bit activations cost 8.6-12.9 points and 2-bit activations 65.8-72.7 points. With QAT, 4-bit activations cost 0.61-0.95 points (except W3 A4 with 3-bit depthwise convs: 1.32).
+- Down to 4-bit weights, PTQ alone keeps accuracy within about 1 point. At 3 bits PTQ falls to 81.1% and at 2 bits to 10% (chance level). 10 epochs of QAT bring 3-bit weights back to 94.0% and 2-bit weights to 89.7-92.3% (with 8-bit activations).
+- Activations are the more sensitive side: with PTQ and weights of 4 bits or more, 3-bit activations cost 8.6-12.9 points and 2-bit activations 65.8-72.7 points. With QAT and 3-4-bit weights, 4-bit activations cost 0.61-0.95 points (except W3 A4 with 3-bit depthwise convs: 1.32); with 2-bit weights they cost 3.50 (depthwise 8-bit) and 7.27 points.
 - Keeping the depthwise convs at 8 bits costs little memory (0.89 → 0.93 MB at W3) and helps most at 2 bits (89.7% → 92.3%).
 
 ### Best configuration (Q4)
